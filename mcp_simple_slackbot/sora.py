@@ -1,6 +1,9 @@
 import time
 import os
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Set environment variables or edit the corresponding values here.
 endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
