@@ -5,6 +5,7 @@ mcp>=1.0.0
 httpx>=0.24.1
 aiohttp>=3.11.13
 uvicorn>=0.23.2
+requests>=2.32.4
 
 # Development dependencies
 pyright>=1.1.379
