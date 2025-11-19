@@ -23,6 +23,14 @@ class Orchestrator:
         self.health = health
 
     async def start(self):
+        # MCP initialization
+        try:
+            await self.mcp.start()
+            await self.health.set_status("mcp", "ok")
+        except Exception:
+            await self.health.set_status("mcp", "err")
+            raise
+
         # Slack health
         try:
             self.slack.on_message_handler = self.handle_slack_message

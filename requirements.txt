@@ -4,6 +4,7 @@ openai>=2.8.1
 slack_sdk>=3.38.0
 pydantic>=2.0
 requests>=2.32.5
+mcp>=1.0.0
 
 # Development dependencies
 pyright>=1.1.379

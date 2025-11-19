@@ -11,7 +11,7 @@ class HealthMonitor:
         self.components: Dict[str, str] = {
             "slack": "unknown",
             "llm": "unknown",
-            "mcp": "ok",
+            "mcp": "unknown",
             "sora": "unknown",
         }
         self.lock = asyncio.Lock()

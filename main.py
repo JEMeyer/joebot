@@ -21,7 +21,7 @@ async def main():
 
     llm = LLMClient(cfg.openai_api_key, cfg.openai_base_url, cfg.openai_model)
     slack = SlackManager(cfg.slack_bot_token, cfg.slack_app_token)
-    mcp = MCPManager()
+    mcp = MCPManager(cfg.mcp_servers_path)
     sora = SoraClient(cfg.sora_api_key, cfg.sora_base_url)
 
     orchestrator = Orchestrator(slack, llm, mcp, sora, health)
@@ -32,10 +32,14 @@ async def main():
     await runner.setup()
     health_site = web.TCPSite(runner, "0.0.0.0", 8080)
 
-    await asyncio.gather(
-        orchestrator.start(),
-        health_site.start(),
-    )
+    try:
+        await asyncio.gather(
+            orchestrator.start(),
+            health_site.start(),
+        )
+    finally:
+        await mcp.stop()
+        await runner.cleanup()
 
 
 if __name__ == "__main__":

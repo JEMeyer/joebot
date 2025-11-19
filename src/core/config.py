@@ -16,6 +16,7 @@ class AppConfig(BaseModel):
     sora_base_url: str
 
     debug: bool = False
+    mcp_servers_path: str = "mcp_servers.json"
 
 
 def load_config() -> AppConfig:
@@ -30,6 +31,7 @@ def load_config() -> AppConfig:
             sora_api_key=os.getenv("SORA_API_KEY", ""),
             sora_base_url=os.getenv("SORA_BASE_URL", ""),
             debug=os.getenv("DEBUG", "false").lower() == "true",
+            mcp_servers_path=os.getenv("MCP_SERVERS_PATH", "mcp_servers.json"),
         )
     except ValidationError:
         logging.error("Configuration error", exc_info=True)
