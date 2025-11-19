@@ -2,9 +2,20 @@ import json
 import logging
 import os
 import re
-from typing import Any, Dict
+from typing import TypedDict, cast
 
 from dotenv import load_dotenv
+
+
+class MCPServerDefinition(TypedDict):
+    command: str
+    args: list[str]
+    description: str
+    env: dict[str, str]
+
+
+class MCPServersConfig(TypedDict):
+    mcpServers: dict[str, MCPServerDefinition]
 
 
 class Configuration:
@@ -13,23 +24,25 @@ class Configuration:
     def __init__(self) -> None:
         """Initialize configuration with environment variables."""
         self.load_env()
-        self.slack_bot_token = os.getenv("SLACK_BOT_TOKEN")
-        self.slack_app_token = os.getenv("SLACK_APP_TOKEN")
-        self.openai_base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.llm_model = os.getenv("LLM_MODEL", "gpt-4-turbo")
-        
+        self.slack_bot_token: str | None = os.getenv("SLACK_BOT_TOKEN")
+        self.slack_app_token: str | None = os.getenv("SLACK_APP_TOKEN")
+        self.openai_base_url: str = os.getenv(
+            "OPENAI_BASE_URL", "https://api.openai.com/v1"
+        )
+        self.openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
+        self.llm_model: str = os.getenv("LLM_MODEL", "gpt-4-turbo")
+
         # Azure OpenAI for video generation (Sora)
-        self.azure_openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-        self.azure_openai_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        self.azure_openai_endpoint: str | None = os.getenv("AZURE_OPENAI_ENDPOINT")
+        self.azure_openai_api_key: str | None = os.getenv("AZURE_OPENAI_API_KEY")
 
     @staticmethod
     def load_env() -> None:
         """Load environment variables from .env file."""
-        load_dotenv()
+        _ = load_dotenv()
 
     @staticmethod
-    def load_config(file_path: str) -> Dict[str, Any]:
+    def load_config(file_path: str) -> MCPServersConfig:
         """Load server configuration from JSON file.
 
         Args:
@@ -58,7 +71,7 @@ class Configuration:
             content = content.replace(match.group(0), env_value)
 
         # Parse JSON
-        return json.loads(content)
+        return cast(MCPServersConfig, json.loads(content))
 
     def validate_slack_config(self) -> None:
         """Validate that required Slack configuration is present."""
@@ -75,9 +88,13 @@ class Configuration:
     def validate_video_config(self) -> None:
         """Validate that Azure OpenAI configuration for video generation is present."""
         if not self.azure_openai_endpoint:
-            logging.warning("AZURE_OPENAI_ENDPOINT not set - video generation will be disabled")
+            logging.warning(
+                "AZURE_OPENAI_ENDPOINT not set - video generation will be disabled"
+            )
         if not self.azure_openai_api_key:
-            logging.warning("AZURE_OPENAI_API_KEY not set - video generation will be disabled")
+            logging.warning(
+                "AZURE_OPENAI_API_KEY not set - video generation will be disabled"
+            )
 
     def has_video_config(self) -> bool:
         """Check if video generation configuration is available."""

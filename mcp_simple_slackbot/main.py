@@ -10,29 +10,28 @@ import asyncio
 import logging
 import sys
 
-from config import Configuration
-from llm import LLMClient
-from mcp_manager import MCPManager, Server
-from slack_manager import SlackBot
+from mcp_simple_slackbot.config import Configuration, MCPServersConfig
+from mcp_simple_slackbot.llm import LLMClient
+from mcp_simple_slackbot.mcp_manager import MCPManager, Server
+from mcp_simple_slackbot.slack_manager import SlackBot
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 
 class MCPBotHub:
     """Central hub that manages all bot components."""
 
-    def __init__(self):
-        self.config = Configuration()
-        self.mcp_manager = None
-        self.llm_client = None
-        self.slack_bot = None
+    def __init__(self) -> None:
+        self.config: Configuration = Configuration()
+        self.mcp_manager: MCPManager | None = None
+        self.llm_client: LLMClient | None = None
+        self.slack_bot: SlackBot | None = None
         # Future: self.discord_bot = None
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """Initialize all components."""
         logging.info("Initializing MCP Bot Hub...")
 
@@ -43,7 +42,7 @@ class MCPBotHub:
         self.llm_client = LLMClient(
             api_key=str(self.config.openai_api_key),
             model=self.config.llm_model,
-            base_url=self.config.openai_base_url
+            base_url=self.config.openai_base_url,
         )
         logging.info("LLM client initialized")
 
@@ -55,7 +54,7 @@ class MCPBotHub:
 
         logging.info("MCP Bot Hub initialization complete")
 
-    def _validate_config(self):
+    def _validate_config(self) -> None:
         """Validate all required configuration."""
         try:
             self.config.validate_llm_config()
@@ -65,13 +64,15 @@ class MCPBotHub:
             logging.error(f"Configuration validation failed: {e}")
             sys.exit(1)
 
-    async def _initialize_mcp_servers(self):
+    async def _initialize_mcp_servers(self) -> None:
         """Initialize MCP servers and manager."""
         try:
-            server_config = self.config.load_config("servers_config.json")
+            server_config: MCPServersConfig = self.config.load_config(
+                "servers_config.json"
+            )
+            server_entries = server_config["mcpServers"]
             servers = [
-                Server(name, srv_config)
-                for name, srv_config in server_config["mcpServers"].items()
+                Server(name, srv_config) for name, srv_config in server_entries.items()
             ]
 
             self.mcp_manager = MCPManager(servers)
@@ -84,16 +85,21 @@ class MCPBotHub:
             logging.error(f"Failed to initialize MCP servers: {e}")
             raise
 
-    async def _initialize_bots(self):
+    async def _initialize_bots(self) -> None:
         """Initialize platform-specific bots."""
         # Initialize Slack bot
-        if self.config.slack_bot_token and self.config.slack_app_token and self.mcp_manager and self.llm_client:
+        if (
+            self.config.slack_bot_token
+            and self.config.slack_app_token
+            and self.mcp_manager
+            and self.llm_client
+        ):
             self.slack_bot = SlackBot(
                 slack_bot_token=self.config.slack_bot_token,
                 slack_app_token=self.config.slack_app_token,
                 mcp_manager=self.mcp_manager,
                 llm_client=self.llm_client,
-                has_video_config=self.config.has_video_config()
+                has_video_config=self.config.has_video_config(),
             )
             logging.info("Slack bot initialized")
         else:
@@ -104,7 +110,7 @@ class MCPBotHub:
         #     self.discord_bot = DiscordBot(...)
         #     logging.info("Discord bot initialized")
 
-    async def start(self):
+    async def start(self) -> None:
         """Start all bots."""
         logging.info("Starting all bots...")
 
@@ -126,7 +132,7 @@ class MCPBotHub:
             logging.info("Received shutdown signal...")
             await self.cleanup()
 
-    async def cleanup(self):
+    async def cleanup(self) -> None:
         """Clean up all resources."""
         logging.info("Cleaning up resources...")
 
@@ -148,9 +154,9 @@ class MCPBotHub:
         logging.info("Cleanup complete")
 
 
-async def main():
+async def main() -> None:
     """Main entry point."""
-    hub = MCPBotHub()
+    hub: MCPBotHub = MCPBotHub()
 
     try:
         await hub.initialize()

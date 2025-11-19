@@ -1,8 +1,8 @@
 import asyncio
 import logging
-from typing import Dict, List
 
-import httpx
+from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 
 class LLMClient:
@@ -16,13 +16,18 @@ class LLMClient:
             model: Model identifier to use
             base_url: Base URL for the LLM provider's API
         """
-        self.base_url = base_url
-        self.api_key = api_key
-        self.model = model
-        self.timeout = 30.0  # 30 second timeout
-        self.max_retries = 2
+        self.base_url: str = base_url
+        self.api_key: str = api_key
+        self.model: str = model
+        self.timeout: float = 30.0  # 30 second timeout
+        self.max_retries: int = 2
+        self.client: AsyncOpenAI = AsyncOpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            timeout=self.timeout,
+        )
 
-    async def get_response(self, messages: List[Dict[str, str]]) -> str:
+    async def get_response(self, messages: list[ChatCompletionMessageParam]) -> str:
         """Get a response from the LLM API.
 
         Args:
@@ -33,42 +38,31 @@ class LLMClient:
         """
         return await self._get_openai_response(messages)
 
-    async def _get_openai_response(self, messages: List[Dict[str, str]]) -> str:
+    async def _get_openai_response(
+        self, messages: list[ChatCompletionMessageParam]
+    ) -> str:
         """Get a response from the OpenAI API."""
-        url = f"{self.base_url}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": 0.7,
-        }
-
         for attempt in range(self.max_retries + 1):
             try:
-                async with httpx.AsyncClient(timeout=self.timeout) as client:
-                    response = await client.post(url, json=payload, headers=headers)
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0.7,
+                )
 
-                    if response.status_code == 200:
-                        response_data = response.json()
-                        return response_data["choices"][0]["message"]["content"]
-                    else:
-                        if attempt == self.max_retries:
-                            return (
-                                f"Error from API: {response.status_code} - "
-                                f"{response.text}"
-                            )
-                        await asyncio.sleep(2**attempt)  # Exponential backoff
+                message_content = response.choices[0].message.content or ""
+                return message_content
             except Exception as e:
                 if attempt == self.max_retries:
                     return f"Failed to get response: {str(e)}"
-                await asyncio.sleep(2**attempt)  # Exponential backoff
-        return ""
+                await asyncio.sleep(
+                    2**attempt  # pyright: ignore[reportAny]
+                )  # Exponential backoff
+        return "Failed to get response -- end of function"
 
-    async def interpret_tool_result(self, tool_name: str, arguments: str, tool_result: str) -> str:
+    async def interpret_tool_result(
+        self, tool_name: str, arguments: str, tool_result: str
+    ) -> str:
         """Get an interpretation of a tool result from the LLM.
 
         Args:
@@ -79,7 +73,7 @@ class LLMClient:
         Returns:
             LLM's interpretation of the tool result
         """
-        messages = [
+        messages: list[ChatCompletionMessageParam] = [
             {
                 "role": "system",
                 "content": (
@@ -103,5 +97,7 @@ class LLMClient:
         try:
             return await self.get_response(messages)
         except Exception as e:
-            logging.error(f"Error getting tool result interpretation: {e}", exc_info=True)
+            logging.error(
+                f"Error getting tool result interpretation: {e}", exc_info=True
+            )
             raise

@@ -2,7 +2,7 @@
   "mcpServers": {
     "sqlite": {
       "command": "uvx",
-      "args": ["mcp-server-sqlite", "--db-path", "./test.db"],
+      "args": ["mcp-server-sqlite", "--db-path", "/data/test.db"],
       "description": "SQLite database access for storing and querying data"
     },
     "fetch": {
@@ -13,13 +13,6 @@
     "sequential-thinking": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
-    },
-    "google-maps": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-google-maps"],
-      "env": {
-        "GOOGLE_MAPS_API_KEY": "${GOOGLE_MAPS_API_KEY}"
-      }
     }
   }
 }

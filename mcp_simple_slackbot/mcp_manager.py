@@ -8,6 +8,8 @@ from typing import Any, Dict, List
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+from mcp_simple_slackbot.config import MCPServerDefinition
+
 
 class Tool:
     """Represents a tool with its properties and formatting."""
@@ -46,10 +48,10 @@ Arguments:
 class Server:
     """Manages MCP server connections and tool execution."""
 
-    def __init__(self, name: str, config: Dict[str, Any]) -> None:
+    def __init__(self, name: str, config: MCPServerDefinition) -> None:
         self.name: str = name
-        self.config: Dict[str, Any] = config
-        self.stdio_context: Any | None = None
+        self.config: MCPServerDefinition = config
+        self.stdio_context: None = None
         self.session: ClientSession | None = None
         self._cleanup_lock: asyncio.Lock = asyncio.Lock()
         self.exit_stack: AsyncExitStack = AsyncExitStack()
@@ -79,14 +81,14 @@ class Server:
             session = await self.exit_stack.enter_async_context(
                 ClientSession(read, write)
             )
-            await session.initialize()
+            _ = await session.initialize()
             self.session = session
         except Exception as e:
             logging.error(f"Error initializing server {self.name}: {e}")
             await self.cleanup()
             raise
 
-    async def list_tools(self) -> List[Tool]:
+    async def list_tools(self) -> list[Tool]:
         """List available tools from the server.
 
         Returns:
@@ -99,12 +101,10 @@ class Server:
             raise RuntimeError(f"Server {self.name} not initialized")
 
         tools_response = await self.session.list_tools()
-        tools = []
+        tools: list[Tool] = []
 
-        for item in tools_response:
-            if isinstance(item, tuple) and item[0] == "tools":
-                for tool in item[1]:
-                    tools.append(Tool(tool.name, tool.description, tool.inputSchema))
+        for tool in tools_response.tools:
+            tools.append(Tool(tool.name, tool.description or "", tool.inputSchema))
 
         return tools
 
@@ -182,7 +182,7 @@ class MCPManager:
             except Exception as e:
                 logging.error(f"Failed to initialize server {server.name}: {e}")
 
-    def get_all_tools(self) -> List[Tool]:
+    def get_all_tools(self) -> list[Tool]:
         """Get all available tools from all servers."""
         return self.tools
 
